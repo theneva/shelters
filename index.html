@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tilfluktsrom i Norge</title>
+    <meta name="viewport" content="initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      #licence {
+        position: absolute;
+        bottom: 16px;
+        left: 8px;
+        max-width: 500px;
+        padding: 8px;
+
+        background-color: rgba(255, 255, 255, 0.8);
+        color: black;
+      }
+
+      #licence h1 {
+        font-size: 1.5rem;
+        margin: 0;
+      }
+
+      #licence__close {
+        position: absolute;
+        top: 0px;
+        right: 8px;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="licence">
+      <div id="licence__close" title="Lukk">&Cross;</div>
+      <h1>Tilfluktsrom i Norge</h1>
+      <p>
+        Punktene i kartet baserer seg på
+        <a
+          href="https://data.norge.no/data/direktoratet-samfunnssikkerhet-og-beredskap/offentlige-tilfluktsrom-i-norge"
+          >Offentlige tilfluktsrom i Norge</a
+        >, publisert av Direktoratet for samfunssikkerhet og beredskap under
+        <a href="https://data.norge.no/nlod/no/1.0"
+          >Norsk lisens for offentlige data</a
+        >. Punktene oppdateres uregelmessig, og presisjon kan derfor ikke
+        garanteres.
+      </p>
+    </div>
+
+    <script>
+      const licence = document.getElementById('licence');
+      const closeButton = document.getElementById('licence__close');
+      closeButton.addEventListener('click', function() {
+        licence.style.display = 'none';
+      });
+    </script>
+    <script>
+      var sheltersPromise = fetch('/shelters.json').then(function(res) {
+        return res.json();
+      });
+
+      var map;
+      function initMap() {
+        var middleOfNorwayCoordinates = {
+          lat: 65.197163,
+          lng: 13.303857
+        };
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: middleOfNorwayCoordinates,
+          zoom: 5
+        });
+
+        addShelters();
+      }
+
+      function addShelters() {
+        sheltersPromise.then(function(shelters) {
+          var markers = shelters.features.map(function(feature) {
+            var coordinates = feature.geometry.coordinates;
+            var position = {
+              lat: coordinates[1],
+              lng: coordinates[0]
+            };
+
+            var properties = feature.properties;
+
+            var address = properties.adresse;
+            var capacity = properties.plasser;
+            var area = properties.areal;
+            var year = properties.byggear;
+            var category = properties.kategori;
+
+            var contentString =
+              '<table><thead></thead><tbody>' +
+              '<tr><td>Adresse</td><td>' +
+              address +
+              '</td></tr>' +
+              '<tr><td>Plasser</td><td>' +
+              capacity +
+              '</td></tr>' +
+              '<tr><td>Areal</td><td>' +
+              area +
+              ' m<sup>2</sup></td></tr>' +
+              '<tr><td>Byggeår</td><td>' +
+              year +
+              '</td></tr>' +
+              '<tr><td>Kategori</td><td>' +
+              category +
+              '</td></tr>' +
+              '</tbody></table>';
+
+            var infoWindow = new google.maps.InfoWindow({
+              content: contentString
+            });
+
+            var marker = new google.maps.Marker({
+              position: position,
+              map: map
+            });
+
+            marker.addListener('click', function() {
+              infoWindow.open(map, marker);
+            });
+
+            return marker;
+          });
+
+          var markerClusterer = new MarkerClusterer(map, markers, {
+            imagePath:
+              'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m'
+          });
+        });
+      }
+    </script>
+    <script src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js"></script>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-88SRE8jdv-e0Jfk-0pYVuqNCJJdJuRs&callback=initMap"
+      async
+      defer
+    ></script>
+  </body>
+</html>
